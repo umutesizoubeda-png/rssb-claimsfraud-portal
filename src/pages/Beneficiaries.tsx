@@ -25,19 +25,22 @@ export default function Beneficiaries() {
     status: 'active',
   });
 
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await api<Beneficiary[]>('/api/beneficiaries');
+      setRows(res);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      setLoading(true); setError('');
-      try {
-        const res = await api<Beneficiary[]>('/api/beneficiaries');
-        if (mounted) setRows(res);
-      } catch (e) {
-        if (mounted) setError((e as Error).message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
+    // call load but ensure mounted state for safety
+    (async () => { if (mounted) await load(); })();
     return () => { mounted = false; };
   }, []);
 

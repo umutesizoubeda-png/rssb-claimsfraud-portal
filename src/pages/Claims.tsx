@@ -21,17 +21,19 @@ export default function Claims() {
     if (s && FILTERS.includes(s)) Promise.resolve().then(() => setFilter(s));
   }, [searchParams]);
 
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await api<Claim[]>('/api/claims');
+      setClaims(res);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally { setLoading(false); }
+  };
+
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      setLoading(true); setError('');
-      try {
-        const res = await api<Claim[]>('/api/claims');
-        if (mounted) setClaims(res);
-      } catch (e) {
-        if (mounted) setError((e as Error).message);
-      } finally { if (mounted) setLoading(false); }
-    })();
+    (async () => { if (mounted) await load(); })();
     return () => { mounted = false; };
   }, []);
 

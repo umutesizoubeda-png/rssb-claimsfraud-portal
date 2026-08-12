@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Badge } from './ui';
 import type { DashData } from './dashHelpers';
+export type { DashData } from './dashHelpers';
 import { STATUS_COLORS } from './dashHelpers';
 
 export function Kpi({ icon: Icon, label, value, tone, sub }: { icon: React.ElementType; label: string; value: string; tone: string; sub?: string }) {
@@ -35,12 +36,12 @@ export function QueueCard({ icon: Icon, label, count, to, tone, cta }: { icon: R
 }
 
 export function TrendChart({ trend }: { trend: DashData['trend'] }) {
-  const maxClaims = Math.max(1, ...trend.map((t) => t.claims));
+  const maxClaims = Math.max(1, ...trend.map((t: { claims: number }) => t.claims));
   return (
     <Card className="p-5">
       <h3 className="mb-4 text-sm font-semibold text-slate-900">Claims Trend</h3>
       <div className="flex h-48 items-end gap-2">
-        {trend.map((t) => (
+        {trend.map((t: { month: string; claims: number; flagged: number }) => (
           <div key={t.month} className="flex flex-1 flex-col items-center gap-1">
             <div className="relative flex w-full flex-1 items-end">
               <div className="w-full rounded-t-md bg-emerald-500/90" style={{ height: `${(t.claims / maxClaims) * 100}%` }} />
@@ -103,7 +104,7 @@ export function RiskProviders({ providers }: { providers: DashData['topProviders
     <Card className="p-5">
       <h3 className="mb-4 text-sm font-semibold text-slate-900">Highest-Risk Providers</h3>
       <div className="space-y-3">
-        {providers.map((p) => (
+        {providers.map((p: { id: number; name: string; flagged_claims: number; total_claims: number; district: string; type: string; risk_score: number; risk_level: string }) => (
           <div key={p.id} className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-800">{p.name}</p>

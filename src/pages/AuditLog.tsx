@@ -10,20 +10,21 @@ export default function AuditLog() {
   const [rows, setRows] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await api<Entry[]>('/api/audit');
+      setRows(res);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      setLoading(true); setError('');
-      try {
-        const res = await api<Entry[]>('/api/audit');
-        if (mounted) setRows(res);
-      } catch (e) {
-        if (mounted) setError((e as Error).message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
+    (async () => { if (mounted) await load(); })();
     return () => { mounted = false; };
   }, []);
 

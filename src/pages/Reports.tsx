@@ -32,17 +32,19 @@ export default function Reports() {
   const [error, setError] = useState('');
   // `now` timestamp removed — not used directly by UI
 
+  const load = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await api<ReportData>('/api/reports');
+      setData(res);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally { setLoading(false); }
+  };
+
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      setLoading(true); setError('');
-      try {
-        const res = await api<ReportData>('/api/reports');
-        if (mounted) setData(res);
-      } catch (e) {
-        if (mounted) setError((e as Error).message);
-      } finally { if (mounted) setLoading(false); }
-    })();
+    (async () => { if (mounted) await load(); })();
     return () => { mounted = false; };
   }, []);
 
