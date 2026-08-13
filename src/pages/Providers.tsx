@@ -4,11 +4,22 @@ import { api } from '../lib/api';
 import { Card, Spinner, ErrorState, Badge, RiskMeter } from '../components/ui';
 import PageHeader from '../components/PageHeader';
 import type { Provider } from '../lib/types';
+import { useAuth } from '../contexts/AuthContext';
+
+// Admin-only: add provider modal state
+import { useMemo } from 'react';
 
 export default function Providers() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const { profile } = useAuth();
+
+  // Add Provider modal state
+  const [isOpen, setIsOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ name: '', code: '', type: '', district: '', risk_score: 5, risk_level: 'low' });
 
   const load = () => {
     setLoading(true); setError('');
@@ -30,7 +41,12 @@ export default function Providers() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <PageHeader title="Providers" subtitle="Healthcare facilities & their fraud risk profiles" />
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <PageHeader title="Providers" subtitle="Healthcare facilities & their fraud risk profiles" />
+        {profile?.role === 'admin' && (
+          <button onClick={() => setIsOpen(true)} className="rounded-xl bg-emerald-600 px-3 py-2 text-white text-sm font-semibold">Add Provider</button>
+        )}
+      </div>
       {loading ? <Spinner /> : error ? <ErrorState message={error} onRetry={load} /> : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {providers.map((p) => (
@@ -55,6 +71,46 @@ export default function Providers() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-800">Add New Provider</h2>
+              <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600">Close</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault(); setSubmitting(true);
+              try {
+                await api('/api/providers', { method: 'POST', headers: { 'X-User-Email': profile?.email || '' }, body: JSON.stringify(formData) });
+                setIsOpen(false);
+                setFormData({ name: '', code: '', type: '', district: '', risk_score: 5, risk_level: 'low' });
+                // reload providers
+                api<Provider[]>('/api/providers').then(setProviders).catch((e) => setError(e.message));
+              } catch (err) {
+                alert(`Failed to add provider: ${err instanceof Error ? err.message : 'Unknown error'}`);
+              } finally { setSubmitting(false); }
+            }} className="space-y-4">
+              <input required placeholder="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              <input required placeholder="Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              <input placeholder="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              <input placeholder="District" value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              <div className="flex gap-2">
+                <input type="number" min={0} max={100} value={formData.risk_score} onChange={(e) => setFormData({ ...formData, risk_score: Number(e.target.value) })} className="w-24 border px-3 py-2 rounded-xl" />
+                <select value={formData.risk_level} onChange={(e) => setFormData({ ...formData, risk_level: e.target.value })} className="border px-3 py-2 rounded-xl">
+                  <option value="low">low</option>
+                  <option value="medium">medium</option>
+                  <option value="high">high</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setIsOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100">Cancel</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 rounded-xl bg-emerald-600 text-white">{submitting ? 'Saving...' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

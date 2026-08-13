@@ -17,6 +17,12 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      // Authorization: require caller email and ensure role is admin
+      const callerEmail = req.headers['x-user-email'] || req.headers['X-User-Email'];
+      if (!callerEmail) return res.status(401).json({ error: 'Unauthorized' });
+      const { data: profile } = await supabase.from('profiles').select('role').eq('email', String(callerEmail)).maybeSingle();
+      if (!profile || profile.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+
       const body = req.body || {};
       const { data, error } = await supabase
         .from('beneficiaries')

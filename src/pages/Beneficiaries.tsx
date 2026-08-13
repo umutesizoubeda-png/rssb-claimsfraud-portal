@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, Users } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import { Card, Spinner, ErrorState, Badge } from '../components/ui';
 import PageHeader from '../components/PageHeader';
 import type { Beneficiary } from '../lib/types';
@@ -10,6 +11,8 @@ export default function Beneficiaries() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+
+  const { profile, loading: authLoading } = useAuth();
 
   // Modal & Form State
   const [isOpen, setIsOpen] = useState(false);
@@ -51,6 +54,7 @@ export default function Beneficiaries() {
     try {
       await api('/api/beneficiaries', {
         method: 'POST',
+        headers: { 'X-User-Email': profile?.email || '' },
         body: JSON.stringify({
           ...formData,
           coverage_percent: Number(formData.coverage_percent),
@@ -94,16 +98,18 @@ export default function Beneficiaries() {
       {/* Page Header with Action Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <PageHeader title="Beneficiaries" subtitle={`${rows.length} insured members`} />
-        <button
-          onClick={() => setIsOpen(true)}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
-        >
+        {profile?.role === 'admin' && (
+          <button
+            onClick={() => setIsOpen(true)}
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm self-start sm:self-auto"
+          >
           {/* Plus Icon (Inline SVG) */}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Add Beneficiary
-        </button>
+            Add Beneficiary
+          </button>
+        )}
       </div>
 
       {/* Search Input */}
