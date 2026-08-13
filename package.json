@@ -8,6 +8,7 @@
     "zip": "node scripts/make-zip.mjs",
     "prebuild": "node scripts/ensure-bin-perms.mjs || true",
     "build": "npx tsc -b && npx vite build",
+    "vercel-build": "npm ci --include=dev && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
