@@ -1,47 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
-import { triggerRestore } from './db-wake.js';
 
-// Guard initialization so missing env vars don't crash the function host.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function createMissingStub(msg) {
-  const err = new Error(msg);
-  const stubReturn = new Proxy({}, {
-    get() {
-      return () => Promise.reject(err);
-    }
-  });
-
-  return new Proxy({}, {
-    get(target, prop) {
-      if (prop === 'from') {
-        return () => stubReturn;
-      }
-      // any other chainable method returns a rejecting function
-      return () => Promise.reject(err);
-    }
-  });
+function makeMissingClient() {
+	const err = new Error('Supabase client unavailable: missing environment variables');
+	return new Proxy({}, {
+		get() {
+			return () => Promise.reject(err);
+		}
+	});
 }
 
 let supabase;
-if (!supabaseUrl || !serviceRole) {
-  console.error('Supabase env missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.');
-  supabase = createMissingStub('Supabase not configured on server. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+if (!supabaseUrl || !supabaseAnonKey) {
+	// Expose a stub that throws useful errors instead of crashing the host
+	supabase = makeMissingClient();
 } else {
-  supabase = createClient(
-    supabaseUrl,
-    serviceRole,
-    {
-      global: {
-        fetch: async (url, options) => {
-          const res = await fetch(url, options);
-          if (!res.ok && res.status >= 500) triggerRestore();
-          return res;
-        },
-      },
-    }
-  );
+	// Use the anon key for client-side usage; server code should use service role where needed
+	supabase = createClient(supabaseUrl, supabaseAnonKey, {
+		auth: { persistSession: false }
+	});
 }
 
 export default supabase;
