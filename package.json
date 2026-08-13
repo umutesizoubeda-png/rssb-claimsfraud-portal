@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "zip": "node scripts/make-zip.mjs",
+    "prebuild": "chmod -R +x node_modules/.bin || true",
     "build": "npx tsc -b && npx vite build",
     "lint": "eslint .",
     "preview": "vite preview"
