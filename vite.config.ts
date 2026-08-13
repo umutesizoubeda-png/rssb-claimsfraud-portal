@@ -1,17 +1,25 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { visualizer } from 'vite-plugin-visualizer'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig(async ({ mode }) => {
-  const plugins = [react(), tailwindcss()];
+  const plugins: any[] = [react(), tailwindcss()];
     try {
     // @ts-expect-error: optional dev-time source tags file
     const m = await import('./.vite-source-tags.js');
     plugins.push(m.sourceTags());
   } catch {
     // no-op if the optional helper isn't present
+  }
+
+  if (mode === 'development') {
+    plugins.push(
+      // generate a simple bundle report during local dev builds
+      // file will be written to `dist/stats.html` when `vite build` runs
+      visualizer({ filename: 'dist/stats.html', open: false })
+    );
   }
 
   const env = loadEnv(mode, process.cwd(), ['VITE_', 'NEXT_PUBLIC_']);
@@ -29,7 +37,7 @@ export default defineConfig(async ({ mode }) => {
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
-          manualChunks(id) {
+          manualChunks(id: string) {
             if (id.includes('node_modules')) {
               if (id.includes('chart.js') || id.includes('recharts') || id.includes('d3') || id.includes('xlsx')) return 'charts'
               return 'vendor'
