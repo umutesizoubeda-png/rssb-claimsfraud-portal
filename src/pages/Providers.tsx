@@ -84,7 +84,7 @@ export default function Providers() {
             <form onSubmit={async (e) => {
               e.preventDefault(); setSubmitting(true);
               try {
-                await api('/api/providers', { method: 'POST', headers: { 'X-User-Email': profile?.email || '' }, body: JSON.stringify(formData) });
+                await api('/api/providers', { method: 'POST', headers: { 'X-User-Email': profile?.email || '' }, body: JSON.stringify({ ...formData, risk_score: Number(formData.risk_score) }) });
                 setIsOpen(false);
                 setFormData({ name: '', code: '', type: '', district: '', risk_score: 5, risk_level: 'low' });
                 // reload providers
@@ -93,17 +93,42 @@ export default function Providers() {
                 alert(`Failed to add provider: ${err instanceof Error ? err.message : 'Unknown error'}`);
               } finally { setSubmitting(false); }
             }} className="space-y-4">
-              <input required placeholder="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
-              <input required placeholder="Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
-              <input placeholder="Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
-              <input placeholder="District" value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
-              <div className="flex gap-2">
-                <input type="number" min={0} max={100} value={formData.risk_score} onChange={(e) => setFormData({ ...formData, risk_score: Number(e.target.value) })} className="w-24 border px-3 py-2 rounded-xl" />
-                <select value={formData.risk_level} onChange={(e) => setFormData({ ...formData, risk_level: e.target.value })} className="border px-3 py-2 rounded-xl">
-                  <option value="low">low</option>
-                  <option value="medium">medium</option>
-                  <option value="high">high</option>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
+                <input required placeholder="Provider name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Code</label>
+                <input required placeholder="Unique code (e.g. PRV-001)" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Type</label>
+                <select required value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full border px-3 py-2 rounded-xl">
+                  <option value="">Select type</option>
+                  <option value="Hospital">Hospital</option>
+                  <option value="Clinic">Clinic</option>
+                  <option value="Pharmacy">Pharmacy</option>
+                  <option value="Laboratory">Laboratory</option>
+                  <option value="Other">Other</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">District</label>
+                <input required placeholder="District (e.g. Kigali)" value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })} className="w-full border px-3 py-2 rounded-xl" />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Risk score</label>
+                  <input type="number" min={0} max={100} required value={formData.risk_score} onChange={(e) => setFormData({ ...formData, risk_score: Number(e.target.value) })} className="w-full border px-3 py-2 rounded-xl" />
+                </div>
+                <div className="w-40">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Risk level</label>
+                  <select value={formData.risk_level} onChange={(e) => setFormData({ ...formData, risk_level: e.target.value })} className="w-full border px-3 py-2 rounded-xl">
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                </div>
               </div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setIsOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100">Cancel</button>
