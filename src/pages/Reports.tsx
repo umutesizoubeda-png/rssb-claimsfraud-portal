@@ -3,7 +3,7 @@ import { FileDown, FileText, ShieldAlert, RefreshCw, Clock, Printer } from 'luci
 import { api, RWF } from '../lib/api';
 import { Card, Spinner, ErrorState, Badge } from '../components/ui';
 import PageHeader from '../components/PageHeader';
-import { formatCAT, catFileStamp, downloadCSV, printPDF } from '../lib/report';
+import { formatCAT, catFileStamp, downloadDocx, printPDF } from '../lib/report';
 
 interface AuditEntry { action: string; actor: string; details: string; timestamp: string }
 interface FlaggedRow {
@@ -48,53 +48,102 @@ export default function Reports() {
     return () => { mounted = false; };
   }, []);
 
-  const exportSummaryCSV = () => {
+  const exportSummaryDocx = () => {
     if (!data) return;
     const s = data.summary;
-    const rows: (string | number)[][] = [
-      ['RSSB Health Insurance — Claims & Fraud Detection Report'],
-      ['Report generated on', formatCAT(data.generatedAt)],
-      [],
-      ['Metric', 'Value'],
-      ['Total Claims', s.totalClaims],
-      ['Flagged Claims', s.flaggedClaims],
-      ['Fraud Rate (%)', s.fraudRate],
-      ['Approved Claims', s.approvedClaims],
-      ['Rejected Claims', s.rejectedClaims],
-      ['Approval Rate (%)', s.approvalRate],
-      ['Total Billed (RWF)', s.totalBilled],
-      ['Total Reimbursed (RWF)', s.totalReimbursed],
-      ['Amount At Risk (RWF)', s.atRiskAmount],
-      ['Avg Processing Time (hours)', s.avgProcessingHours],
-      ['Active Beneficiaries', s.activeBeneficiaries],
-      ['Total Providers', s.totalProviders],
-      ['High-Risk Providers', s.highRiskProviders],
-      [],
-      ['Status Breakdown'],
-      ...Object.entries(data.statusCounts).map(([k, v]) => [k, v]),
-      [],
-      ['Service Type', 'Claims', 'Amount (RWF)'],
-      ...Object.entries(data.byService).map(([k, v]) => [k, v.count, v.amount]),
-    ];
-    downloadCSV(`RSSB_Claims_Summary_${catFileStamp(data.generatedAt)}.csv`, rows);
+    const html = `
+      <span class="badge">RSSB</span>
+      <h1>Claims & Fraud Detection — Summary</h1>
+      <div class="meta">Report generated on: <strong>${formatCAT(data.generatedAt)}</strong></div>
+      <h2>Executive Summary</h2>
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Total Claims</td><td>${s.totalClaims}</td></tr>
+        <tr><td>Flagged Claims</td><td>${s.flaggedClaims}</td></tr>
+        <tr><td>Fraud Rate (%)</td><td>${s.fraudRate}</td></tr>
+        <tr><td>Approved Claims</td><td>${s.approvedClaims}</td></tr>
+        <tr><td>Rejected Claims</td><td>${s.rejectedClaims}</td></tr>
+        <tr><td>Approval Rate (%)</td><td>${s.approvalRate}</td></tr>
+        <tr><td>Total Billed (RWF)</td><td>${RWF(s.totalBilled)}</td></tr>
+        <tr><td>Total Reimbursed (RWF)</td><td>${RWF(s.totalReimbursed)}</td></tr>
+        <tr><td>Amount At Risk (RWF)</td><td>${RWF(s.atRiskAmount)}</td></tr>
+        <tr><td>Avg Processing Time (hours)</td><td>${s.avgProcessingHours}</td></tr>
+        <tr><td>Active Beneficiaries</td><td>${s.activeBeneficiaries}</td></tr>
+        <tr><td>Total Providers</td><td>${s.totalProviders}</td></tr>
+        <tr><td>High-Risk Providers</td><td>${s.highRiskProviders}</td></tr>
+      </table>
+      <h2>Status Breakdown</h2>
+      <table>
+        <tr><th>Status</th><th>Count</th></tr>
+        ${Object.entries(data.statusCounts).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+      </table>
+    `;
+    downloadDocx(`RSSB_Claims_Summary_${catFileStamp(data.generatedAt)}.docx`, html);
   };
 
-  const exportFlaggedCSV = () => {
+  const exportSummaryPDF = () => {
     if (!data) return;
-    const rows: (string | number)[][] = [
-      ['RSSB Health Insurance — Flagged Claims Audit Report'],
-      ['Report generated on', formatCAT(data.generatedAt)],
-      [],
-      ['Claim #', 'Beneficiary', 'Member ID', 'Provider', 'Provider Risk', 'Service', 'Service Date', 'Amount (RWF)', 'Fraud Score', 'Anomaly', 'Eligibility', 'Status', 'Detected Signals', 'Submitted (CAT)', 'Last Updated (CAT)', 'Audit Trail'],
-      ...data.flaggedReport.map((c) => [
-        c.claim_number, c.beneficiary, c.member_id, c.provider, c.provider_risk, c.service_type, c.service_date,
-        c.total_amount, c.fraud_score, c.anomaly_score, c.eligibility, c.status,
-        (c.flags || []).join(' | '),
-        formatCAT(c.submitted_at), c.last_updated ? formatCAT(c.last_updated) : '',
-        (c.audit_trail || []).map((a) => `[${formatCAT(a.timestamp)}] ${a.action} by ${a.actor}: ${a.details}`).join(' || '),
-      ]),
-    ];
-    downloadCSV(`RSSB_Flagged_Claims_Audit_${catFileStamp(data.generatedAt)}.csv`, rows);
+    const s = data.summary;
+    const html = `
+      <span class="badge">RSSB</span>
+      <h1>Claims & Fraud Detection — Summary</h1>
+      <div class="meta">Report generated on: <strong>${formatCAT(data.generatedAt)}</strong></div>
+      <h2>Executive Summary</h2>
+      <div class="grid">
+        <div class="kpi"><div class="label">Total Claims</div><div class="value">${s.totalClaims}</div></div>
+        <div class="kpi"><div class="label">Flagged Claims</div><div class="value">${s.flaggedClaims}</div></div>
+        <div class="kpi"><div class="label">Fraud Rate</div><div class="value">${s.fraudRate}%</div></div>
+        <div class="kpi"><div class="label">Approval Rate</div><div class="value">${s.approvalRate}%</div></div>
+      </div>
+    `;
+    printPDF(`RSSB_Claims_Summary_${catFileStamp(data.generatedAt)}`, html);
+  };
+
+  const exportFlaggedDocx = () => {
+    if (!data) return;
+    const rowsHtml = data.flaggedReport.map((c) => `
+      <tr>
+        <td>${c.claim_number}</td>
+        <td>${c.beneficiary}</td>
+        <td>${c.member_id}</td>
+        <td>${c.provider}</td>
+        <td>${c.provider_risk}</td>
+        <td>${c.service_type}</td>
+        <td>${c.service_date}</td>
+        <td>${RWF(c.total_amount)}</td>
+        <td>${c.fraud_score}</td>
+        <td>${c.anomaly_score}</td>
+        <td>${c.eligibility}</td>
+        <td>${c.status}</td>
+        <td>${(c.flags || []).join(' | ')}</td>
+        <td>${formatCAT(c.submitted_at)}</td>
+        <td>${c.last_updated ? formatCAT(c.last_updated) : ''}</td>
+      </tr>
+    `).join('');
+    const html = `
+      <span class="badge">RSSB</span>
+      <h1>Flagged Claims Audit Report</h1>
+      <div class="meta">Report generated on: <strong>${formatCAT(data.generatedAt)}</strong></div>
+      <table>
+        <tr><th>Claim #</th><th>Beneficiary</th><th>Member ID</th><th>Provider</th><th>Provider Risk</th><th>Service</th><th>Service Date</th><th>Amount</th><th>Fraud Score</th><th>Anomaly</th><th>Eligibility</th><th>Status</th><th>Signals</th><th>Submitted</th><th>Last Updated</th></tr>
+        ${rowsHtml}
+      </table>
+    `;
+    downloadDocx(`RSSB_Flagged_Claims_Audit_${catFileStamp(data.generatedAt)}.docx`, html);
+  };
+
+  const exportFlaggedPDF = () => {
+    if (!data) return;
+    const html = `
+      <span class="badge">RSSB</span>
+      <h1>Flagged Claims Audit Report</h1>
+      <div class="meta">Report generated on: <strong>${formatCAT(data.generatedAt)}</strong></div>
+      <table>
+        <tr><th>Claim #</th><th>Provider</th><th>Amount</th><th>Score</th><th>Signals</th></tr>
+        ${data.flaggedReport.map((c) => `<tr><td>${c.claim_number}</td><td>${c.provider}</td><td>${RWF(c.total_amount)}</td><td>${c.fraud_score}</td><td>${(c.flags||[]).join(' | ')}</td></tr>`).join('')}
+      </table>
+    `;
+    printPDF(`RSSB_Flagged_Claims_Audit_${catFileStamp(data.generatedAt)}`, html);
   };
 
   const exportPDF = () => {
@@ -170,14 +219,17 @@ export default function Reports() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={exportSummaryCSV} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20">
-                <FileDown className="h-4 w-4" /> Summary CSV
+              <button onClick={exportSummaryDocx} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20">
+                <FileText className="h-4 w-4" /> Summary DOCX
               </button>
-              <button onClick={exportFlaggedCSV} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20">
-                <ShieldAlert className="h-4 w-4" /> Flagged CSV
+              <button onClick={exportFlaggedDocx} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20">
+                <ShieldAlert className="h-4 w-4" /> Flagged DOCX
               </button>
-              <button onClick={exportPDF} className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-400">
-                <Printer className="h-4 w-4" /> Export PDF
+              <button onClick={exportSummaryPDF} className="flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20">
+                <FileDown className="h-4 w-4" /> Summary PDF
+              </button>
+              <button onClick={exportFlaggedPDF} className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-400">
+                <Printer className="h-4 w-4" /> Flagged PDF
               </button>
             </div>
           </Card>

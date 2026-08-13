@@ -60,3 +60,18 @@ export function printPDF(title: string, bodyHtml: string) {
   </body></html>`);
   w.document.close();
 }
+
+// Download a Word-compatible document (HTML inside .docx/.doc wrapper).
+export function downloadDocx(filename: string, bodyHtml: string) {
+  const content = `<!doctype html><html><head><meta charset="utf-8"><title>${filename}</title></head><body>${bodyHtml}</body></html>`;
+  const blob = new Blob([content], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  // Use .docx extension as requested (Word will accept HTML-based .doc content)
+  a.download = filename.endsWith('.docx') ? filename : `${filename}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
